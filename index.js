@@ -35,6 +35,9 @@ async function run() {
       .db("sports-in-sun")
       .collection("instructors");
     const classesCollection = client.db("sports-in-sun").collection("classes");
+    const selectedClassCollection = client
+      .db("sports-in-sun")
+      .collection("selectedClass");
     const paymentCollection = client.db("sports-in-sun").collection("payments");
 
     // instructor and classes data get for all users
@@ -45,6 +48,13 @@ async function run() {
 
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Selected Class
+    app.post("/selectedClass", async (req, res) => {
+      const selectedClass = req.body;
+      const result = await selectedClassCollection.insertOne(selectedClass);
       res.send(result);
     });
 
