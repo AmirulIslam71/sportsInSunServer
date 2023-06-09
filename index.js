@@ -30,7 +30,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
-    const userCollection = client.db("sports-in-sun").collection("user");
+    const usersCollection = client.db("sports-in-sun").collection("users");
     const instructorCollection = client
       .db("sports-in-sun")
       .collection("instructors");
@@ -39,6 +39,13 @@ async function run() {
       .db("sports-in-sun")
       .collection("selectedClass");
     const paymentCollection = client.db("sports-in-sun").collection("payments");
+
+    // User collection create and display
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
 
     // instructor and classes data get for all users
     app.get("/instructors", async (req, res) => {
