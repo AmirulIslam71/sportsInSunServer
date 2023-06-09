@@ -8,7 +8,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 
 // middleware
-
 app.use(cors());
 app.use(express.json());
 
@@ -39,6 +38,15 @@ async function run() {
       .db("sports-in-sun")
       .collection("selectedClass");
     const paymentCollection = client.db("sports-in-sun").collection("payments");
+
+    // jwt token
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET_TOKEN, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
 
     // User collection create and display
     app.get("/users", async (req, res) => {
