@@ -11,6 +11,27 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// jwt middleware
+const verifyJWT = (req, res, next) => {
+  const authorization = req.header.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+  // bearer token
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.SECRET_TOKEN, (error, decoded) => {
+    if (error) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 // mongoDb connect
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.kqqmxrw.mongodb.net/?retryWrites=true&w=majority`;
@@ -101,7 +122,34 @@ async function run() {
     // Selected Class
     app.post("/selectedClass", async (req, res) => {
       const selectedClass = req.body;
+      const query = {
+        email: selectedClass.email,
+        classId: selectedClass.classId,
+      };
+      const existingSelection = await selectedClassCollection.findOne(query);
+
+      if (existingSelection) {
+        return res.status(400).send({ message: "class already selected" });
+      }
+
       const result = await selectedClassCollection.insertOne(selectedClass);
+      res.send(result);
+    });
+
+    app.get("/selectedClass", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const result = await selectedClassCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.delete("/selectedClass/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await selectedClassCollection.deleteOne(query);
       res.send(result);
     });
 
