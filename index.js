@@ -182,7 +182,9 @@ async function run() {
     });
 
     app.get("/classes", async (req, res) => {
-      const result = await classesCollection.find().limit(12).toArray();
+      const result = await classesCollection
+        .find({ status: "approved" })
+        .toArray();
       res.send(result);
     });
 
@@ -201,8 +203,45 @@ async function run() {
       res.send(result);
     });
 
+    app.get(
+      "/classes/myClass",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const email = req.query.email;
+        if (!email) {
+          res.send([]);
+        }
+        const decodedEmail = req.decoded.email;
+        if (email !== decodedEmail) {
+          return res
+            .status(403)
+            .send({ error: true, message: "forbidden access" });
+        }
+
+        const query = { email: email };
+        const result = await classesCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
+
+    app.put("/classes/:id", verifyJWT, verifyInstructor, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedClass = req.body;
+      const newClass = {
+        $set: {
+          name: updatedClass.name,
+          availableSeats: updatedClass.availableSeats,
+          price: updatedClass.price,
+          image: updatedClass.image,
+        },
+      };
+      const result = await classesCollection.updateOne(filter, newClass);
+    });
+
     // Selected Class
-    app.post("/selectedClass", async (req, res) => {
+    app.post("/selectedClass", verifyJWT, async (req, res) => {
       const selectedClass = req.body;
       const query = {
         email: selectedClass.email,
@@ -235,7 +274,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/selectedClass/:id", async (req, res) => {
+    app.delete("/selectedClass/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await selectedClassCollection.deleteOne(query);
