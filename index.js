@@ -172,8 +172,26 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/instructors/popular", async (req, res) => {
+      const result = await instructorCollection
+        .find()
+        .sort({ student: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
     app.get("/classes", async (req, res) => {
-      const result = await classesCollection.find().toArray();
+      const result = await classesCollection.find().limit(12).toArray();
+      res.send(result);
+    });
+
+    app.get("/classes/popular", async (req, res) => {
+      const result = await classesCollection
+        .find()
+        .sort({ enrolled: -1 })
+        .limit(6)
+        .toArray();
       res.send(result);
     });
 
