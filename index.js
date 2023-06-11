@@ -177,6 +177,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/classes", verifyJWT, verifyInstructor, async (req, res) => {
+      const newClass = req.body;
+      const result = await classesCollection.insertOne(newClass);
+      res.send(result);
+    });
+
     // Selected Class
     app.post("/selectedClass", async (req, res) => {
       const selectedClass = req.body;
