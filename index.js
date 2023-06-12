@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const port = process.env.PORT || 5000;
@@ -240,8 +241,22 @@ async function run() {
       const result = await classesCollection.updateOne(filter, newClass);
     });
 
+    app.patch("/classes/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $inc: {
+          availableSeats: -1,
+          enrolled: Number(1),
+        },
+      };
+
+      const result = await classesCollection.updateMany(filter, updateDoc);
+      res.send(result);
+    });
+
     // Selected Class
-    app.post("/selectedClass", verifyJWT, async (req, res) => {
+    app.post("/selectedClass", async (req, res) => {
       const selectedClass = req.body;
       const query = {
         email: selectedClass.email,
@@ -278,6 +293,58 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await selectedClassCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // create payment intent
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // payment related api
+    app.post("/payments", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      const query = {
+        _id: new ObjectId(payment.payId),
+      };
+      const deleteResult = await selectedClassCollection.deleteOne(query);
+      res.send({ insertResult, deleteResult });
+    });
+
+    // payment history get
+
+    app.get("/payments", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        res.send([]);
+      }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const result = await paymentCollection
+        .find(query)
+        .sort({ date: -1 })
+        .limit(10)
+        .toArray();
+
       res.send(result);
     });
 
