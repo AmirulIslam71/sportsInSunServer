@@ -111,7 +111,7 @@ async function run() {
       }
       const query = { email: email };
       const result = await usersCollection.findOne(query);
-      res.send(result);
+      res.send({ result, addClass });
     });
 
     app.post("/users", async (req, res) => {
@@ -407,6 +407,53 @@ async function run() {
         payments,
         totalPayment,
         total,
+      });
+    });
+
+    // instructor stats
+    app.get(
+      "/instructorStats",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const classes = await classesCollection.estimatedDocumentCount();
+        const enrolledClasses = await classesCollection.find().toArray();
+        const enrolled = enrolledClasses.reduce(
+          (sum, student) => sum + student.enrolled,
+          0
+        );
+        const seats = enrolledClasses.reduce(
+          (sum, student) => sum + student.availableSeats,
+          0
+        );
+
+        res.send({
+          classes,
+          enrolledClasses,
+          enrolled,
+          seats,
+        });
+      }
+    );
+
+    // Student stats
+    app.get("/studentStats", verifyJWT, async (req, res) => {
+      const classes = await classesCollection.estimatedDocumentCount();
+      const enrolledClasses = await classesCollection.find().toArray();
+      const enrolled = enrolledClasses.reduce(
+        (sum, student) => sum + student.enrolled,
+        0
+      );
+      const seats = enrolledClasses.reduce(
+        (sum, student) => sum + student.availableSeats,
+        0
+      );
+
+      res.send({
+        classes,
+        enrolledClasses,
+        enrolled,
+        seats,
       });
     });
 
