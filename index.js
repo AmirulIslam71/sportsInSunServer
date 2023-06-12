@@ -102,6 +102,18 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/profile/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      if (req.decoded.email !== email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { email: email };
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    });
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -159,6 +171,21 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/classes/:status/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.params.status;
+      const feedback = req.body.feedback;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: status,
+          feedback: feedback,
+        },
+      };
+      const result = await classesCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
     // user deleted
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
@@ -185,6 +212,13 @@ async function run() {
     app.get("/classes", async (req, res) => {
       const result = await classesCollection
         .find({ status: "approved" })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/allClasses", async (req, res) => {
+      const result = await classesCollection
+        .find({ status: "pending" })
         .toArray();
       res.send(result);
     });
@@ -235,10 +269,10 @@ async function run() {
           name: updatedClass.name,
           availableSeats: updatedClass.availableSeats,
           price: updatedClass.price,
-          image: updatedClass.image,
         },
       };
       const result = await classesCollection.updateOne(filter, newClass);
+      res.send(result);
     });
 
     app.patch("/classes/:id", verifyJWT, async (req, res) => {
@@ -346,6 +380,34 @@ async function run() {
         .toArray();
 
       res.send(result);
+    });
+
+    // Dashboard stats get
+    // admin Dashboard stats
+    app.get("/adminStats", verifyJWT, verifyAdmin, async (req, res) => {
+      const users = await usersCollection.estimatedDocumentCount();
+      const classes = await classesCollection.estimatedDocumentCount();
+      const instructor = await instructorCollection.estimatedDocumentCount();
+      const enrolledClasses = await classesCollection.find().toArray();
+      const enrolled = enrolledClasses.reduce(
+        (sum, student) => sum + student.enrolled,
+        0
+      );
+      const payments = await paymentCollection.estimatedDocumentCount();
+      const totalPayment = await paymentCollection.find().toArray();
+      const total = totalPayment.reduce(
+        (sum, payment) => sum + payment.price,
+        0
+      );
+      res.send({
+        users,
+        classes,
+        instructor,
+        enrolled,
+        payments,
+        totalPayment,
+        total,
+      });
     });
 
     // Send a ping to confirm a successful connection
